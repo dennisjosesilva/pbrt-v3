@@ -1,8 +1,11 @@
-Forked Repo for multipole skin render implementation
+Forked repo for multipole skin render implementation
 ====================================================
 
-This is a fork from https://github.com/mmp/pbrt-v3 which I intended to code the multipole BSSRDF model for rendering human skin.
+This is a fork from https://github.com/mmp/pbrt-v3 where I intended to code the multipole BSSRDF model[1] for rendering human skin[2].
 
+[1] Craig Donner and Henrik Wann Jensen. 2005. Light diffusion in multi-layered translucent materials. In ACM SIGGRAPH 2005 Papers (SIGGRAPH '05), Markus Gross (Ed.). ACM, New York, NY, USA, 1032-1039. DOI: https://doi.org/10.1145/1186822.1073308
+
+[2] Craig Donner and Henrik Wann Jensen. 2006. A spectral BSSRDF for shading human skin. In Proceedings of the 17th Eurographics conference on Rendering Techniques (EGSR '06), Tomas Akenine-Möller and Wolfgang Heidrich (Eds.). Eurographics Association, Aire-la-Ville, Switzerland, Switzerland, 409-417. DOI=http://dx.doi.org/10.2312/EGWR/EGSR06/409-417
 
 pbrt, Version 3
 ===============
