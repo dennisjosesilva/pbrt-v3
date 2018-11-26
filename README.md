@@ -1,3 +1,9 @@
+Forked Repo for multipole skin render implementation
+====================================================
+
+This is a fork from https://github.com/mmp/pbrt-v3 which I intended to code the multipole BSSRDF model for rendering human skin.
+
+
 pbrt, Version 3
 ===============
 
