@@ -62,4 +62,10 @@ Float DipoleSolver::T(Float r)
 }
 
 
-// -------------------------- Multipole Solver -----------------------------------------------------------
+// -------------------------- Multipole Table -----------------------------------------------------------
+MultipoleTable::MultipoleTable(std::size_t nSample):
+  m_transmitance(nSample), 
+  m_reflectance(nSample), 
+  m_squaredDistance(nSample)
+{}
+

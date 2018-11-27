@@ -42,7 +42,37 @@ struct MultipoleLayer
 };
 
 
+// ----------------- Multipole options ----------------------------------------------------------
+struct MultipoleOptions
+{
+	Float desiredStepSize;
+	std::size_t desiredLength;
+};
+
 // -------------------- Multipole Table ---------------------------------------------------------
+class MultipoleTable
+{
+public:
+	MultipoleTable(std::size_t nSamples);
+
+	inline Float &transmitance(int index) { return m_transmitance[index]; }
+	inline Float transmitance(int index) const { return m_transmitance[index]; }
+	Float &transmitance(Float squaredDistance);
+	Float transmitance(Float squaredDistance) const;
+
+	inline Float &reflectance(int index) { return m_reflectance[index]; }
+	inline Float reflectance(int index) const { return m_reflectance[index]; }
+	Float &reflectance(Float squaredDistance);
+	Float reflectance(Float squaredDistance) const;
+
+	inline Float &squaredDistance(int index) { return m_squaredDistance[index]; }
+	inline Float squaredDistance(int index) const { return m_squaredDistance[index]; }
+
+private:
+	std::vector<Float> m_transmitance;
+	std::vector<Float> m_reflectance;
+	std::vector<Float> m_squaredDistance;
+}
 
 
 #endif
