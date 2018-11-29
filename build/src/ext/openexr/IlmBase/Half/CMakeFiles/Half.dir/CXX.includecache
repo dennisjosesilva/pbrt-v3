@@ -1,0 +1,30 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+/home/dennis/Documents/phd/courses/topics-in-computer-graphics/project/code/repo/pbrt-v3/src/ext/openexr/IlmBase/Half/half.cpp
+assert.h
+-
+half.h
+/home/dennis/Documents/phd/courses/topics-in-computer-graphics/project/code/repo/pbrt-v3/src/ext/openexr/IlmBase/Half/half.h
+toFloat.h
+/home/dennis/Documents/phd/courses/topics-in-computer-graphics/project/code/repo/pbrt-v3/src/ext/openexr/IlmBase/Half/toFloat.h
+eLut.h
+/home/dennis/Documents/phd/courses/topics-in-computer-graphics/project/code/repo/pbrt-v3/src/ext/openexr/IlmBase/Half/eLut.h
+
+/home/dennis/Documents/phd/courses/topics-in-computer-graphics/project/code/repo/pbrt-v3/src/ext/openexr/IlmBase/Half/half.h
+halfExport.h
+/home/dennis/Documents/phd/courses/topics-in-computer-graphics/project/code/repo/pbrt-v3/src/ext/openexr/IlmBase/Half/halfExport.h
+iostream
+-
+
+/home/dennis/Documents/phd/courses/topics-in-computer-graphics/project/code/repo/pbrt-v3/src/ext/openexr/IlmBase/Half/halfExport.h
+
+src/ext/openexr/IlmBase/Half/eLut.h
+
+src/ext/openexr/IlmBase/Half/toFloat.h
+
