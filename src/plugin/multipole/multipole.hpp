@@ -59,19 +59,22 @@ class MultipoleTable
 {
 public:
 	MultipoleTable(std::size_t nSamples);
+	MultipoleTable();
 
 	inline Float &transmitance(int index) { return m_transmitance[index]; }
 	inline Float transmitance(int index) const { return m_transmitance[index]; }
-	Float &transmitance(Float squaredDistance);
-	Float transmitance(Float squaredDistance) const;
+	/*Float &transmitance(Float squaredDistance);
+	Float transmitance(Float squaredDistance) const;*/
 
 	inline Float &reflectance(int index) { return m_reflectance[index]; }
 	inline Float reflectance(int index) const { return m_reflectance[index]; }
-	Float &reflectance(Float squaredDistance);
-	Float reflectance(Float squaredDistance) const;
+	/*Float &reflectance(Float squaredDistance);
+	Float reflectance(Float squaredDistance) const;*/
 
 	inline Float &squaredDistance(int index) { return m_squaredDistance[index]; }
 	inline Float squaredDistance(int index) const { return m_squaredDistance[index]; }
+
+	void PushBack(Float reflectance, Float transmitance, Float squaredDistance);
 
 private:
 	std::vector<Float> m_transmitance;
@@ -99,22 +102,50 @@ public:
   inline unsigned int NCols() const { return m_ncols; }
   inline unsigned int NElements() const { return m_ncols*m_nrows; }
 
-  inline Matrix<T> operator*= (const Matrix<T> &other) { 
+
+  // TODO: I must implement also division and sum.
+  inline FFTMatrix<T> operator+ (const FFTMatrix<T> &other) {
+  	Matrix<T> ret{m_nrows, m_ncols};
+  	for (unsigned int i = 0; i < NElements(); ++i) {
+  		ret[i] = (*this)[i] + other[i];
+  	}
+  }
+
+  inline FFTMatrix<T> operator+= (const FFTMatrix<T> &other) {
+  	for (unsigned int i = 0; i < NElements(); ++i)	{
+  		(*this)[i] += other[i];
+  	}
+  }
+
+  inline FFTMatrix<T> operator/ (const FFTMatrix<T> &other) {
+  	FFTMatrix<T> ret{m_nrows, m_ncols};
+  	for(unsigned int i = 0; i < NElements(); ++i) {
+  		ret[i] = (*this)[i] / other[i];
+  	}
+  }
+
+  inline FFTMatrix<T> operator/= (const FFTMatrix<T> &other) {
+  	for (unsigned int i = 0; i < NElements(); ++i) {
+  		(*this)[i] /= other[i];
+  	}
+  }
+
+  inline FFTMatrix<T> operator*= (const FFTMatrix<T> &other) { 
   	for (unsigned int i = 0; i < m_data.size(); i++)
   		m_data[i] *= other[i];
   }
 
-  inline Matrix<T> operator* (const Matrix<T> &other) {
-  	Matrix<T> ret(m_nrows, m_ncols);
+  inline FFTMatrix<T> operator* (const FFTMatrix<T> &other) {
+  	FFTMatrix<T> ret(m_nrows, m_ncols);
   	for (unsigned int i = 0; i < NElements(); i++) 
   		ret[i] = (*this)[i] * other[i];
   	return ret;
   }
 
   // The two Functions below have been taken from the original code.
-  Matrix<T> ScaleAndShift(unsigned int new_rows, unsigned int new_cols, unsigned int sh_row, unsigned int sh_col) const
+  FFTMatrix<T> ScaleAndShift(unsigned int new_rows, unsigned int new_cols, unsigned int sh_row, unsigned int sh_col) const
   {
-  	Matrix ret(new_cols, new_rows);
+  	FFTMatrix ret(new_cols, new_rows);
   	unsigned int min_rows = min(m_nrows, new_rows);
   	unsigned int min_cols = min(m_ncols, new_cols);
 
@@ -131,9 +162,9 @@ public:
   	return ret;
   }
 
-  Matrix<T> ScaleAndShiftReversed(unsigned int new_rows, unsigned int new_cols, unsigned int sh_row, unsigned int sh_col) const
+  FFTMatrix<T> ScaleAndShiftReversed(unsigned int new_rows, unsigned int new_cols, unsigned int sh_row, unsigned int sh_col) const
   {
-  	Matrix<T> ret(new_rows, new_cols);
+  	FFTMatrix<T> ret(new_rows, new_cols);
 		unsigned int min_rows = min(m_nrows, new_rows);
   	unsigned int min_cols = min(m_ncols, new_cols);
 		
@@ -149,21 +180,28 @@ public:
 		return ret;
   }
 
+  // Method taken from the original code.
+  void OneMinusSelf()
+  {
+  	for (T &elem : m_data) {
+  		elem = 1 - elem;
+  	}
+  }
+
 private:
   unsigned int m_nrows;
   unsigned int m_ncols;
   std::vector<T> m_data;
 }; 
 
-
 //  This struct is heavy based on MatrixProfile from the original code.
 struct MatrixProfile
 {
 	MatrixProfile(unsigned int length);
 
-	FFTMatrix reflectance;
-	FFTMatrix transmitance;
-	unsigned int length() { return reflectance.length(); }
+	FFTMatrix<real_type> reflectance;
+	FFTMatrix<real_type> transmitance;
+	unsigned int length() { return reflectance.NRows(); }
 };
 
 // --------------------------- Multipole Solver -------------------------------------------------------

@@ -3,6 +3,7 @@
 #include "external/simple_fft/fft.h"
 
 #include <cmath>
+#include <complex>
 
 // static constant
 // From the original code - 11 dipole pair is enough to get a good approximation.
@@ -79,6 +80,16 @@ MultipoleTable::MultipoleTable(std::size_t nSample):
   m_squaredDistance(nSample)
 {}
 
+MultipoleTable::MultipoleTable()
+{}
+
+void MultipoleTable::PushBack(Float reflectance, Float transmitance, Float squaredDistance)
+{
+  m_reflectance.push_back(reflactance);
+  m_transmitance.push_back(transmitance);
+  m_squaredDistance.push_back(squaredDistance);
+}
+
 
 // ---------------------- Compute Diffusion Profile ------------------------------------------------------
 // Extracted from the original code 
@@ -150,10 +161,77 @@ MatrixProfile ComputeLayerProfile(const MultipoleLayer &layer, Float stepSize, u
   return profile;
 }
 
+// The below two functions are also very similar with the original source:
+FFTMatrix<complex> runFFT(const FFTMatrix<Float> &matrix) 
+{
+  unsigned int convolution_length = profile.NRows();
+  unsigned int length = convolution_length / 2;
+  unsigned int center = (length - 1) / 2;
+  FFTMatrix<complex_type> out(convolution_length, convolution_length / 2 + 1);
+  const char *error_message = nullptr;
+  bool success = simple_fft::FFT(matrix.ScaleAndShift(convolution_length, convolution_length, center, center),
+    out, convolution_length, convolution_length, error_message);
+  return out; 
+}
+
+FFTMatrix<Float> runIFFT(const FFTMatrix<complex_type> &matrix) 
+{
+  unsigned int convolution_length = profile.NRows();
+  unsigned int length = convolution_length / 2;
+  unsigned int center (length - 1) / 2;
+  FFTMatrix<real_type> out(convolution_length, convolution_length);
+  const char *error_message = nullptr;
+  bool success = simple_fft::IFFT(matrix, out, matrix.NRows(), matrix.NCols(), error_message);
+  return out.ScaleAndShiftReversed(length, length, center, center);
+}
+
+MatrixProfile CombineProfiles(const MatrixProfile &layer1, const MatrixProfile &layer2)
+{
+  MatrixProfile combined{layer1.length()};
+
+  FFTMatrix<complex_type> fR1 = FFT(layer1.reflactance);
+  FFTMatrix<complex_type> fR2 = FFT(layer2.reflactance);
+  FFTMatrix<complex_type> fT1 = IFFT(layer1.transmitance);
+  FFTMatrix<complex_type> fT2 = IFFT(layer2.transmitance);
+
+  FFTMatrix<complex_type> f1MinusR1TimesR2 = fR2*fR1;
+  f1MinusR1TimesR2.OneMinusSelf();
+  
+  FFTMatrix<complex_type> fR12 = fR1 + (fT1*fR2*fT1/f1MinusR1TimesR2);
+  FFTMatrix<complex_type> fT12 = (fT1 * fT2)/f1MinusR1TimesR2;
+
+  combined.reflactance = IFFT(fR12);
+  combined.transmitance = IFFT(fT12);
+
+  return combined;
+} 
 
 
 MultipoleTable ComputeMultipoleDiffusionProfile(const std::vector<MultipoleLayer> &layers, 
   const MultipoleOptions &options)
 {
+  unsigned int length = RoundUpPow2(length * 2);
+  MatrixProfile mp0{length * 2};
 
+
+  mp0 = ComputeLayerProfile(layers[0], options.desiredLength, mp0.length());
+  for (unsigned int i = 1; i < layers.size(); ++i) {
+    MatrixProfile mp1 = ComputeLayerProfile(layers[i], options.desiredLength, mp1.length());
+    mp0 = CombineProfiles(mp0, mp1);
+  }
+
+  MultipoleTable table;
+  unsigned int center = length - 1;
+  unsigned int extent = center;
+  float denormalizeFactor = 1.f / (options.desiredLength * options.desiredLength);
+  for (unsigned int  i = 0; i <= extent; ++i) {
+    for (unsigned int j = i; (i*i + j*j) <= extent; j++) {
+      Float r = mp0.reflactance(center + i, center + j)  * denormalizeFactor;
+      Float t = mp0.transmitance(center + i, center + j) * denormalizeFactor;
+      Float sd = (float)(i*i + j*j) * options.desiredLength * options.desiredLength;
+      table.PushBack(r, t, sd);
+    }
+  }
+
+  return table;
 }
