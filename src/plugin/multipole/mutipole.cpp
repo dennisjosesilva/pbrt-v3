@@ -1,5 +1,4 @@
 #include "multipole.hpp"
-#include "../../core/pbrt.h"
 #include "external/simple_fft/fft.h"
 
 #include <cmath>
@@ -9,12 +8,11 @@
 // From the original code - 11 dipole pair is enough to get a good approximation.
 static const int NUM_DIPOLE_PAIR = 11;
 
-
 // --------------------------- Dipole Solver -----------------------------------------------------------------------
 DipoleSolver::DipoleSolver(Float eta0, Float eta1, Float sigma_a, Float sigma_s_prime, int zi, Float thickness):
-  sigma_a{a},
+  sigma_a{sigma_a},
   sigma_s_prime{sigma_s_prime},
-  d{thickness}
+  d{thickness},
   zi{zi}
 {
   sigma_t_prime = sigma_a + sigma_s_prime;
@@ -29,17 +27,14 @@ DipoleSolver::DipoleSolver(Float eta0, Float eta1, Float sigma_a, Float sigma_s_
 
   zr = 2.f*zi*(d + 2.f*zb) + l;
   zv = 2.f*zi*(d + 2.f*zb) - l - 2.f*zb;
-
-  dr = sqrt(r*r + zr*zr);
-  dv = sqrt(r*r + zv*zv);
 }
 
-Float DipoleSolver::A(Float Fdr)
+Float DipoleSolver::A(Float Fdr) const
 {
   return (1.f + Fdr) / (1.f - Fdr);
 }
 
-Float FresnelDiffuseReflectance(float eta)
+Float DipoleSolver::FresnelDiffuseReflectance(float eta) const
 {
   if (eta >= 1.f) {
     return -(1.4399f/(eta*eta)) + (0.7099f/eta) + 0.6681f + 0.0636f*eta; 
@@ -50,9 +45,12 @@ Float FresnelDiffuseReflectance(float eta)
   }
 }
 
-Float DipoleSolver::R(Float r)
+Float DipoleSolver::R(Float r) const
 {
   Float D = 1.f/(3.f*sigma_t_prime);
+
+  Float dr = sqrt(r*r + zr*zr);
+  Float dv = sqrt(r*r + zv*zv);
 
   Float denTerm1 = alpha_prime * zr * (1 + sigma_tr * dr) * exp(-sigma_tr*dr);
   Float numTerm1 = 4*pbrt::Pi * dr*dr*dr;
@@ -62,8 +60,11 @@ Float DipoleSolver::R(Float r)
   return (denTerm1/numTerm1) - (denTerm2/numTerm2);
 }
 
-Float DipoleSolver::T(Float r)
+Float DipoleSolver::T(Float r) const
 {
+  Float dr = sqrt(r*r + zr*zr);
+  Float dv = sqrt(r*r + zv*zv);
+
   Float denTerm1 = alpha_prime*(d - zr) * (1.f + sigma_tr*dr) * exp(-sigma_tr*dr);
   Float numTerm1 = 4*pbrt::Pi * dr*dr*dr;
   Float denTerm2 = alpha_prime*(d - zv) * (1.f + sigma_tr*dv) * exp(-sigma_tr*dv);
@@ -85,7 +86,7 @@ MultipoleTable::MultipoleTable()
 
 void MultipoleTable::PushBack(Float reflectance, Float transmitance, Float squaredDistance)
 {
-  m_reflectance.push_back(reflactance);
+  m_reflectance.push_back(reflectance);
   m_transmitance.push_back(transmitance);
   m_squaredDistance.push_back(squaredDistance);
 }
@@ -104,18 +105,18 @@ unsigned int RoundUpPow2(unsigned int v)
 }
 
 MatrixProfile::MatrixProfile(unsigned int length):
-  reflactance(length, length), transmitance(length, length)
+  reflectance(length, length), transmitance(length, length)
 {}
 
 MatrixProfile ComputeLayerProfile(const MultipoleLayer &layer, Float stepSize, unsigned int profile_length)
 {
-  MatrixProfile profile<real_type>{profile_length};
+  MatrixProfile profile{profile_length};
   unsigned int center = (profile_length - 1) / 2;
   unsigned int extent = center;
 
   // fill dipole solvers
   std::vector<DipoleSolver> dss;
-  ds.reserve(NUM_DIPOLE_PAIR);
+  dss.reserve(NUM_DIPOLE_PAIR);
   int half_num_dipoles = (NUM_DIPOLE_PAIR-1) / 2;
   for (auto i = -half_num_dipoles; i < half_num_dipoles; ++i) {
     dss.push_back(DipoleSolver{layer.eta0, layer.eta1, layer.sigma_a, layer.sigma_s_prime, i, layer.thickness});
@@ -130,7 +131,7 @@ MatrixProfile ComputeLayerProfile(const MultipoleLayer &layer, Float stepSize, u
       for (const DipoleSolver &ds : dss) {
         real_type r = ds.R((Float)r2) * normalizeFactor;
         real_type t = ds.T((Float)r2) * normalizeFactor;
-        profile.reflactance(center + row, center + col) += r;
+        profile.reflectance(center + row, center + col) += r;
         profile.transmitance(center + row, center + col)  += t;
       }
     }
@@ -139,17 +140,17 @@ MatrixProfile ComputeLayerProfile(const MultipoleLayer &layer, Float stepSize, u
   // Fill the rest of the matrix  through simmetry - also very similar with the original code.
   for (unsigned int row = 1; row <= extent; row++) {
     for (unsigned int col = 0; col < row; col++) {
-      profile.reflactance(center + row, center + col) = profile.reflactance(center + col, center + row);
+      profile.reflectance(center + row, center + col) = profile.reflectance(center + col, center + row);
       profile.transmitance(center + row, center + col) = profile.transmitance(center + col, center + row);
     }
   }
 
   for (unsigned int row = 0; row <= extent; row++) {
     for (unsigned int col = 0; col <= extent; col++) {
-      real_type r = profile.reflactance(center + row, center + col);
-      profile.reflactance(center - row, center + col) = r;
-      profile.reflactance(center + row, center + col) = r;
-      profile.reflactance(center - row, center - col) = r;
+      real_type r = profile.reflectance(center + row, center + col);
+      profile.reflectance(center - row, center + col) = r;
+      profile.reflectance(center + row, center + col) = r;
+      profile.reflectance(center - row, center - col) = r;
 
       real_type t = profile.transmitance(center + row, center + col);
       profile.transmitance(center - row, center + col) = t;
@@ -162,9 +163,9 @@ MatrixProfile ComputeLayerProfile(const MultipoleLayer &layer, Float stepSize, u
 }
 
 // The below two functions are also very similar with the original source:
-FFTMatrix<complex> runFFT(const FFTMatrix<Float> &matrix) 
+FFTMatrix<complex_type> runFFT(FFTMatrix<Float> &matrix) 
 {
-  unsigned int convolution_length = profile.NRows();
+  unsigned int convolution_length = matrix.NRows();
   unsigned int length = convolution_length / 2;
   unsigned int center = (length - 1) / 2;
   FFTMatrix<complex_type> out(convolution_length, convolution_length / 2 + 1);
@@ -174,25 +175,31 @@ FFTMatrix<complex> runFFT(const FFTMatrix<Float> &matrix)
   return out; 
 }
 
-FFTMatrix<Float> runIFFT(const FFTMatrix<complex_type> &matrix) 
+FFTMatrix<Float> runIFFT(FFTMatrix<complex_type> &matrix) 
 {
-  unsigned int convolution_length = profile.NRows();
+  unsigned int convolution_length = matrix.NRows();
   unsigned int length = convolution_length / 2;
-  unsigned int center (length - 1) / 2;
-  FFTMatrix<real_type> out(convolution_length, convolution_length);
+  unsigned int center = (length - 1) / 2;
+  FFTMatrix<complex_type> temp(convolution_length, convolution_length);
+  FFTMatrix<Float> out(convolution_length, convolution_length);
   const char *error_message = nullptr;
-  bool success = simple_fft::IFFT(matrix, out, matrix.NRows(), matrix.NCols(), error_message);
+  bool success = simple_fft::IFFT(matrix, temp, matrix.NRows(), matrix.NCols(), error_message);
+  
+  for (unsigned int i = 0; i < temp.NElements(); ++i) {
+    out[i] = temp[i].real();
+  }
+
   return out.ScaleAndShiftReversed(length, length, center, center);
 }
 
-MatrixProfile CombineProfiles(const MatrixProfile &layer1, const MatrixProfile &layer2)
+MatrixProfile CombineProfiles(MatrixProfile &layer1, MatrixProfile &layer2)
 {
   MatrixProfile combined{layer1.length()};
 
-  FFTMatrix<complex_type> fR1 = FFT(layer1.reflactance);
-  FFTMatrix<complex_type> fR2 = FFT(layer2.reflactance);
-  FFTMatrix<complex_type> fT1 = IFFT(layer1.transmitance);
-  FFTMatrix<complex_type> fT2 = IFFT(layer2.transmitance);
+  FFTMatrix<complex_type> fR1 = runFFT(layer1.reflectance);
+  FFTMatrix<complex_type> fR2 = runFFT(layer2.reflectance);
+  FFTMatrix<complex_type> fT1 = runFFT(layer1.transmitance);
+  FFTMatrix<complex_type> fT2 = runFFT(layer2.transmitance);
 
   FFTMatrix<complex_type> f1MinusR1TimesR2 = fR2*fR1;
   f1MinusR1TimesR2.OneMinusSelf();
@@ -200,8 +207,8 @@ MatrixProfile CombineProfiles(const MatrixProfile &layer1, const MatrixProfile &
   FFTMatrix<complex_type> fR12 = fR1 + (fT1*fR2*fT1/f1MinusR1TimesR2);
   FFTMatrix<complex_type> fT12 = (fT1 * fT2)/f1MinusR1TimesR2;
 
-  combined.reflactance = IFFT(fR12);
-  combined.transmitance = IFFT(fT12);
+  combined.reflectance = runIFFT(fR12);
+  combined.transmitance = runIFFT(fT12);
 
   return combined;
 } 
@@ -226,7 +233,7 @@ MultipoleTable ComputeMultipoleDiffusionProfile(const std::vector<MultipoleLayer
   float denormalizeFactor = 1.f / (options.desiredLength * options.desiredLength);
   for (unsigned int  i = 0; i <= extent; ++i) {
     for (unsigned int j = i; (i*i + j*j) <= extent; j++) {
-      Float r = mp0.reflactance(center + i, center + j)  * denormalizeFactor;
+      Float r = mp0.reflectance(center + i, center + j)  * denormalizeFactor;
       Float t = mp0.transmitance(center + i, center + j) * denormalizeFactor;
       Float sd = (float)(i*i + j*j) * options.desiredLength * options.desiredLength;
       table.PushBack(r, t, sd);

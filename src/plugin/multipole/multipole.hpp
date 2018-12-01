@@ -3,23 +3,28 @@
 #ifndef MULTIPOLE_HPP_INCLUDED
 #define MULTIPOLE_HPP_INCLUDED
 
-
+#include "pbrt.h"
 #include <vector>
 #include "external/simple_fft/fft_settings.h"
+#include <algorithm>
 
 // --------------------------- Dipole Solver ---------------------------------------------------
+
+using Float = pbrt::Float;
+typedef Float real_type;
+
 
 class DipoleSolver
 {
 public:
   DipoleSolver(Float eta0, Float eta1, Float sigma_a, Float sigma_s_prime, int zi, Float thickness);
 
-  Float R(Float r);
-  Float T(Float r);
+  Float R(Float r) const;
+  Float T(Float r) const;
 
 private:
-	Float A(Float rho_d);
-	Float FresnelDiffuseReflectance(float eta);
+	Float A(Float rho_d) const;
+	Float FresnelDiffuseReflectance(float eta) const;
 
 private:
   Float sigma_a;
@@ -30,9 +35,7 @@ private:
   Float Fdr;
   Float zr;
   Float zv;
-  Float dr;
-  Float dv;
-  int zi
+  int zi;
   Float d;
 };
 
@@ -80,7 +83,7 @@ private:
 	std::vector<Float> m_transmitance;
 	std::vector<Float> m_reflectance;
 	std::vector<Float> m_squaredDistance;
-}
+};
 
 
 // ----------------------- Fast Fourier Matrix "adapter" ---------------------------------------------
@@ -93,10 +96,10 @@ public:
   {}
 
   inline T& operator[](unsigned int index) { return m_data[index]; }
-  inline T operator[] const (unsigned int index) { return m_data[index]; }
+  inline T operator[](unsigned int index) const { return m_data[index]; }
 
   inline T& operator() (unsigned int row, unsigned int col) { return m_data[row*m_ncols + col]; }
-  inline T operator() const (unsigned int row, unsigned int col) { return m_data[row*m_ncols + col]; }
+  inline T operator() (unsigned int row, unsigned int col) const { return m_data[row*m_ncols + col]; }
 
   inline unsigned int NRows() const { return m_nrows; }
   inline unsigned int NCols() const { return m_ncols; }
@@ -105,13 +108,14 @@ public:
 
   // TODO: I must implement also division and sum.
   inline FFTMatrix<T> operator+ (const FFTMatrix<T> &other) {
-  	Matrix<T> ret{m_nrows, m_ncols};
+  	FFTMatrix<T> ret{m_nrows, m_ncols};
   	for (unsigned int i = 0; i < NElements(); ++i) {
   		ret[i] = (*this)[i] + other[i];
   	}
+  	return ret;
   }
 
-  inline FFTMatrix<T> operator+= (const FFTMatrix<T> &other) {
+  inline void operator+= (const FFTMatrix<T> &other) {
   	for (unsigned int i = 0; i < NElements(); ++i)	{
   		(*this)[i] += other[i];
   	}
@@ -122,15 +126,16 @@ public:
   	for(unsigned int i = 0; i < NElements(); ++i) {
   		ret[i] = (*this)[i] / other[i];
   	}
+  	return ret;
   }
 
-  inline FFTMatrix<T> operator/= (const FFTMatrix<T> &other) {
+  inline void operator/= (const FFTMatrix<T> &other) {
   	for (unsigned int i = 0; i < NElements(); ++i) {
   		(*this)[i] /= other[i];
   	}
   }
 
-  inline FFTMatrix<T> operator*= (const FFTMatrix<T> &other) { 
+  inline void operator*= (const FFTMatrix<T> &other) { 
   	for (unsigned int i = 0; i < m_data.size(); i++)
   		m_data[i] *= other[i];
   }
@@ -146,13 +151,13 @@ public:
   FFTMatrix<T> ScaleAndShift(unsigned int new_rows, unsigned int new_cols, unsigned int sh_row, unsigned int sh_col) const
   {
   	FFTMatrix ret(new_cols, new_rows);
-  	unsigned int min_rows = min(m_nrows, new_rows);
-  	unsigned int min_cols = min(m_ncols, new_cols);
+  	unsigned int min_rows = std::min(m_nrows, new_rows);
+  	unsigned int min_cols = std::min(m_ncols, new_cols);
 
   	for (unsigned int i = 0; i < min_rows; i++) {
   		unsigned int ii = m_nrows - sh_row + i;
   		if (ii >= m_nrows) ii -= m_nrows;
-  		for (unsigned int j = ; j < min_cols j++) {
+  		for (unsigned int j = 0; j < min_cols; j++) {
   			unsigned int jj = new_cols - sh_col + j;
   			if (jj >= new_cols) jj -= new_cols;
   			ret(ii, jj) = (*this)(i, j);
@@ -165,8 +170,8 @@ public:
   FFTMatrix<T> ScaleAndShiftReversed(unsigned int new_rows, unsigned int new_cols, unsigned int sh_row, unsigned int sh_col) const
   {
   	FFTMatrix<T> ret(new_rows, new_cols);
-		unsigned int min_rows = min(m_nrows, new_rows);
-  	unsigned int min_cols = min(m_ncols, new_cols);
+		unsigned int min_rows = std::min(m_nrows, new_rows);
+  	unsigned int min_cols = std::min(m_ncols, new_cols);
 		
 		for (unsigned int i = 0; i < min_rows; i++) {
 			unsigned int ii = m_nrows - sh_row + i;
@@ -184,7 +189,7 @@ public:
   void OneMinusSelf()
   {
   	for (T &elem : m_data) {
-  		elem = 1 - elem;
+  		elem = T(1) - elem;
   	}
   }
 
@@ -201,7 +206,7 @@ struct MatrixProfile
 
 	FFTMatrix<real_type> reflectance;
 	FFTMatrix<real_type> transmitance;
-	unsigned int length() { return reflectance.NRows(); }
+	unsigned int length() const { return reflectance.NRows(); }
 };
 
 // --------------------------- Multipole Solver -------------------------------------------------------

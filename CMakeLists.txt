@@ -461,6 +461,7 @@ FILE ( GLOB PBRT_SOURCE
   src/shapes/*
   src/textures/*
   src/media/*
+  src/plugin/multipole/*
   )
 
 INCLUDE_DIRECTORIES ( src )
@@ -517,6 +518,14 @@ SET(ALL_PBRT_LIBS
   Ptex_static
   ${ZLIB_LIBRARY}
 )
+
+#temp 
+ADD_EXECUTABLE ( temp_exe src/main/temp.cpp)
+ADD_SANITIZERS ( temp_exe )
+
+SET_TARGET_PROPERTIES ( temp_exe PROPERTIES OUTPUT_NAME temp )
+TARGET_COMPILE_FEATURES ( temp_exe PRIVATE ${PBRT_CXX11_FEATURES} )
+TARGET_LINK_LIBRARIES ( temp_exe ${ALL_PBRT_LIBS} )
 
 # Main renderer
 ADD_EXECUTABLE ( pbrt_exe src/main/pbrt.cpp )
