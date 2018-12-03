@@ -42,6 +42,10 @@ private:
 // ------------------------ Multipole Layer ------------------------------------------------------
 struct MultipoleLayer
 {
+	MultipoleLayer(Float eta0, Float eta1, Float thickness, Float sigma_a, Float sigma_s_prime)
+		:eta0{eta0}, eta1{eta1}, thickness{thickness}, sigma_a{sigma_a}, sigma_s_prime{sigma_s_prime}
+	{}
+
 	Float eta0;
 	Float eta1;
 	Float thickness;
@@ -53,6 +57,10 @@ struct MultipoleLayer
 // ----------------- Multipole options ----------------------------------------------------------
 struct MultipoleOptions
 {
+	MultipoleOptions(Float desiredStepSize, std::size_t desiredLength)
+		:desiredStepSize{desiredStepSize}, desiredLength{desiredLength}
+	{}
+
 	Float desiredStepSize;
 	std::size_t desiredLength;
 };
@@ -78,6 +86,7 @@ public:
 	inline Float squaredDistance(int index) const { return m_squaredDistance[index]; }
 
 	void PushBack(Float reflectance, Float transmitance, Float squaredDistance);
+	std::size_t NSamples() const { return m_reflectance.size(); }
 
 private:
 	std::vector<Float> m_transmitance;
@@ -175,7 +184,7 @@ public:
 		
 		for (unsigned int i = 0; i < min_rows; i++) {
 			unsigned int ii = m_nrows - sh_row + i;
-			if (ii >= new_rows) ii -= m_nrows;
+			if (ii >= m_nrows) ii -= m_nrows;
 			for (unsigned int j = 0; j < min_cols; j++) {
 				unsigned int jj = m_nrows - sh_col + j;
 				if (jj >= m_ncols) jj -= m_ncols;

@@ -165,9 +165,10 @@ MatrixProfile ComputeLayerProfile(const MultipoleLayer &layer, Float stepSize, u
 // The below two functions are also very similar with the original source:
 FFTMatrix<complex_type> runFFT(FFTMatrix<Float> &matrix) 
 {
-  unsigned int convolution_length = matrix.NRows();
-  unsigned int length = convolution_length / 2;
+  unsigned int length = matrix.NRows();
+  unsigned int convolution_length = convolution_length / 2;
   unsigned int center = (length - 1) / 2;
+  std::cout << convolution_length << " -- " << length << " ---- " << center << "\n";
   FFTMatrix<complex_type> out(convolution_length, convolution_length / 2 + 1);
   const char *error_message = nullptr;
   bool success = simple_fft::FFT(matrix.ScaleAndShift(convolution_length, convolution_length, center, center),
@@ -183,7 +184,7 @@ FFTMatrix<Float> runIFFT(FFTMatrix<complex_type> &matrix)
   FFTMatrix<complex_type> temp(convolution_length, convolution_length);
   FFTMatrix<Float> out(convolution_length, convolution_length);
   const char *error_message = nullptr;
-  bool success = simple_fft::IFFT(matrix, temp, matrix.NRows(), matrix.NCols(), error_message);
+  bool success = simple_fft::IFFT(matrix, temp, convolution_length, convolution_length, error_message);
   
   for (unsigned int i = 0; i < temp.NElements(); ++i) {
     out[i] = temp[i].real();
@@ -207,8 +208,8 @@ MatrixProfile CombineProfiles(MatrixProfile &layer1, MatrixProfile &layer2)
   FFTMatrix<complex_type> fR12 = fR1 + (fT1*fR2*fT1/f1MinusR1TimesR2);
   FFTMatrix<complex_type> fT12 = (fT1 * fT2)/f1MinusR1TimesR2;
 
-  combined.reflectance = runIFFT(fR12);
-  combined.transmitance = runIFFT(fT12);
+  /*combined.reflectance = runIFFT(fR12);
+  combined.transmitance = runIFFT(fT12);*/
 
   return combined;
 } 
@@ -217,9 +218,8 @@ MatrixProfile CombineProfiles(MatrixProfile &layer1, MatrixProfile &layer2)
 MultipoleTable ComputeMultipoleDiffusionProfile(const std::vector<MultipoleLayer> &layers, 
   const MultipoleOptions &options)
 {
-  unsigned int length = RoundUpPow2(length * 2);
+  unsigned int length = RoundUpPow2(options.desiredLength);
   MatrixProfile mp0{length * 2};
-
 
   mp0 = ComputeLayerProfile(layers[0], options.desiredLength, mp0.length());
   for (unsigned int i = 1; i < layers.size(); ++i) {
