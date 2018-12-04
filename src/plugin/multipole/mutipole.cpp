@@ -166,10 +166,11 @@ MatrixProfile ComputeLayerProfile(const MultipoleLayer &layer, Float stepSize, u
 FFTMatrix<complex_type> runFFT(FFTMatrix<Float> &matrix) 
 {
   unsigned int length = matrix.NRows();
-  unsigned int convolution_length = length / 2;
+  unsigned int convolution_length = length;
   unsigned int center = (length - 1) / 2;
   FFTMatrix<complex_type> out(convolution_length, convolution_length);
   const char *error_message = nullptr;
+  
   bool success = simple_fft::FFT(matrix.ScaleAndShift(convolution_length, convolution_length, center, center),
     out, convolution_length, convolution_length, error_message);
   return out; 
@@ -207,8 +208,8 @@ MatrixProfile CombineProfiles(MatrixProfile &layer1, MatrixProfile &layer2)
   FFTMatrix<complex_type> fR12 = fR1 + (fT1*fR2*fT1/f1MinusR1TimesR2);
   FFTMatrix<complex_type> fT12 = (fT1 * fT2)/f1MinusR1TimesR2;
 
-  /*combined.reflectance = runIFFT(fR12);
-  combined.transmitance = runIFFT(fT12);*/
+  combined.reflectance = runIFFT(fR12);
+  combined.transmitance = runIFFT(fT12);
 
   return combined;
 } 
