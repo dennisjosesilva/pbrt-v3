@@ -166,10 +166,9 @@ MatrixProfile ComputeLayerProfile(const MultipoleLayer &layer, Float stepSize, u
 FFTMatrix<complex_type> runFFT(FFTMatrix<Float> &matrix) 
 {
   unsigned int length = matrix.NRows();
-  unsigned int convolution_length = convolution_length / 2;
+  unsigned int convolution_length = length / 2;
   unsigned int center = (length - 1) / 2;
-  std::cout << convolution_length << " -- " << length << " ---- " << center << "\n";
-  FFTMatrix<complex_type> out(convolution_length, convolution_length / 2 + 1);
+  FFTMatrix<complex_type> out(convolution_length, convolution_length);
   const char *error_message = nullptr;
   bool success = simple_fft::FFT(matrix.ScaleAndShift(convolution_length, convolution_length, center, center),
     out, convolution_length, convolution_length, error_message);
@@ -179,7 +178,7 @@ FFTMatrix<complex_type> runFFT(FFTMatrix<Float> &matrix)
 FFTMatrix<Float> runIFFT(FFTMatrix<complex_type> &matrix) 
 {
   unsigned int convolution_length = matrix.NRows();
-  unsigned int length = convolution_length / 2;
+  unsigned int length = convolution_length;
   unsigned int center = (length - 1) / 2;
   FFTMatrix<complex_type> temp(convolution_length, convolution_length);
   FFTMatrix<Float> out(convolution_length, convolution_length);
@@ -223,7 +222,7 @@ MultipoleTable ComputeMultipoleDiffusionProfile(const std::vector<MultipoleLayer
 
   mp0 = ComputeLayerProfile(layers[0], options.desiredLength, mp0.length());
   for (unsigned int i = 1; i < layers.size(); ++i) {
-    MatrixProfile mp1 = ComputeLayerProfile(layers[i], options.desiredLength, mp1.length());
+    MatrixProfile mp1 = ComputeLayerProfile(layers[i], options.desiredLength, mp0.length());
     mp0 = CombineProfiles(mp0, mp1);
   }
 

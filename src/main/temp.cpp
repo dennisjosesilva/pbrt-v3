@@ -12,7 +12,8 @@ int main(int argc, char const *argv[])
 
 
 	for (auto i = 0; i < table.NSamples(); i++)
-		std::cout << table.squaredDistance(i) << "\n";
+		std::cout << "table[" << i << "] = " << table.squaredDistance(i) << " -- " << table.reflectance(i) << 
+			" -- " << table.transmitance(i) << "\n";
 
 	std::cout << "table size: " << table.NSamples() << "\n";  
 	std::cout <<  "DONE..." << "\n";
