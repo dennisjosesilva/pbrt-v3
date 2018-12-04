@@ -3,4 +3,6 @@ src/build
 src/debug
 src/bin
 src/objs
+build
+debug
 .sconsign.dblite
