@@ -6,7 +6,7 @@ int main(int argc, char const *argv[])
 	std::vector<MultipoleLayer> layers = { MultipoleLayer{1.0f, 1.0f, 0.05, 0.35, 0.005}, 
 		MultipoleLayer{1.0f, 1.0f, 0.05f, 0.35f, 0.005f}};
 	
-	MultipoleOptions options{0.05, 62};
+	MultipoleOptions options{ 0.005f, 62};
 
 	MultipoleTable table = ComputeMultipoleDiffusionProfile(layers, options);
 

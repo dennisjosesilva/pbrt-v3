@@ -47,8 +47,6 @@ Float DipoleSolver::FresnelDiffuseReflectance(float eta) const
 
 Float DipoleSolver::R(Float r) const
 {
-  Float D = 1.f/(3.f*sigma_t_prime);
-
   Float dr = sqrt(r*r + zr*zr);
   Float dv = sqrt(r*r + zv*zv);
 
@@ -131,6 +129,9 @@ MatrixProfile ComputeLayerProfile(const MultipoleLayer &layer, Float stepSize, u
       for (const DipoleSolver &ds : dss) {
         real_type r = ds.R((Float)r2) * normalizeFactor;
         real_type t = ds.T((Float)r2) * normalizeFactor;
+
+        /* std::cout <<"r(" << center + row << " ,  " << center + col << ") = " << r << "\n"; */
+
         profile.reflectance(center + row, center + col) += r;
         profile.transmitance(center + row, center + col)  += t;
       }
@@ -202,6 +203,12 @@ MatrixProfile CombineProfiles(MatrixProfile &layer1, MatrixProfile &layer2)
   FFTMatrix<complex_type> fT1 = runFFT(layer1.transmitance);
   FFTMatrix<complex_type> fT2 = runFFT(layer2.transmitance);
 
+  /*for (unsigned int i = 0; i < fR1.NRows(); ++i) {
+    for (unsigned int j = 0; j < fR2.NCols(); ++j) {
+      std::cout << "layer1.R(" << i << ", " << j << ") = " << layer1.reflectance(i, j) << "\n";
+    }
+  }*/
+
   FFTMatrix<complex_type> f1MinusR1TimesR2 = fR2*fR1;
   f1MinusR1TimesR2.OneMinusSelf();
   
@@ -221,21 +228,21 @@ MultipoleTable ComputeMultipoleDiffusionProfile(const std::vector<MultipoleLayer
   unsigned int length = RoundUpPow2(options.desiredLength);
   MatrixProfile mp0{length * 2};
 
-  mp0 = ComputeLayerProfile(layers[0], options.desiredLength, mp0.length());
+  mp0 = ComputeLayerProfile(layers[0], options.desiredStepSize, mp0.length());
   for (unsigned int i = 1; i < layers.size(); ++i) {
-    MatrixProfile mp1 = ComputeLayerProfile(layers[i], options.desiredLength, mp0.length());
+    MatrixProfile mp1 = ComputeLayerProfile(layers[i], options.desiredStepSize, mp0.length());
     mp0 = CombineProfiles(mp0, mp1);
   }
 
   MultipoleTable table;
   unsigned int center = length - 1;
   unsigned int extent = center;
-  float denormalizeFactor = 1.f / (options.desiredLength * options.desiredLength);
+  float denormalizeFactor = 1.f / (options.desiredStepSize * options.desiredStepSize);
   for (unsigned int  i = 0; i <= extent; ++i) {
     for (unsigned int j = i; (i*i + j*j) <= extent; j++) {
       Float r = mp0.reflectance(center + i, center + j)  * denormalizeFactor;
       Float t = mp0.transmitance(center + i, center + j) * denormalizeFactor;
-      Float sd = (float)(i*i + j*j) * options.desiredLength * options.desiredLength;
+      Float sd = (float)(i*i + j*j) * options.desiredStepSize * options.desiredStepSize;
       table.PushBack(r, t, sd);
     }
   }
