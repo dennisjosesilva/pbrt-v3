@@ -81,6 +81,7 @@
 #include "materials/subsurface.h"
 #include "materials/translucent.h"
 #include "materials/uber.h"
+#include "materials/skin.h"
 #include "samplers/halton.h"
 #include "samplers/maxmin.h"
 #include "samplers/random.h"
@@ -290,8 +291,8 @@ class TransformCache {
 
     void Clear() {
         transformCacheBytes += arena.TotalAllocated() + hashTable.size() * sizeof(Transform *);
-        hashTable.clear();
         hashTable.resize(512);
+        hashTable.clear();
         hashTableOccupancy = 0;
         arena.Reset();
     }
@@ -590,6 +591,11 @@ std::shared_ptr<Material> MakeMaterial(const std::string &name,
         material = CreateKdSubsurfaceMaterial(mp);
     else if (name == "fourier")
         material = CreateFourierMaterial(mp);
+    else if (name == "skin")
+        material = CreateSkinMaterial(mp);
+    else if (name == "sskin") {
+        material = CreateSimpleSkinMaterial(mp);
+    }
     else {
         Warning("Material \"%s\" unknown. Using \"matte\".", name.c_str());
         material = CreateMatteMaterial(mp);
